@@ -27,8 +27,8 @@ const PDF_PAGE_MARKER_RE = /^--\s*\d+\s+of\s+\d+\s*--$/i;
 
 app.use(
   cors({
-    origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
-    methods: ['GET', 'POST'],
+    origin: true,
+    methods: ['GET', 'POST', 'OPTIONS'],
   })
 );
 app.use(express.json());
