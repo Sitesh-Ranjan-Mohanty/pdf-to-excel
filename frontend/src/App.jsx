@@ -6,17 +6,19 @@ function App() {
   const [file, setFile] = useState(null);
   const [rows, setRows] = useState([]);
   const [fileId, setFileId] = useState('');
+  const [xlsxBase64, setXlsxBase64] = useState('');
   const [fileName, setFileName] = useState('');
   const [status, setStatus] = useState('Select an invoice image or PDF to begin.');
   const [loading, setLoading] = useState(false);
 
-  const canDownload = useMemo(() => Boolean(fileId), [fileId]);
+  const canDownload = useMemo(() => Boolean(xlsxBase64 || fileId), [xlsxBase64, fileId]);
 
   const onFileChange = (event) => {
     const nextFile = event.target.files?.[0] || null;
     setFile(nextFile);
     setRows([]);
     setFileId('');
+    setXlsxBase64('');
     setFileName('');
     setStatus(nextFile ? `Ready to scan: ${nextFile.name}` : 'No file selected.');
   };
@@ -56,6 +58,7 @@ function App() {
 
       setRows(payload.rows || []);
       setFileId(payload.fileId || '');
+      setXlsxBase64(payload.xlsxBase64 || '');
       setFileName(payload.fileName || 'invoice.xlsx');
       setStatus(
         payload.warning || 'Invoice scanned successfully. Preview is ready.'
@@ -63,6 +66,7 @@ function App() {
     } catch (error) {
       setRows([]);
       setFileId('');
+      setXlsxBase64('');
       setFileName('');
       setStatus(
         error.message ||
@@ -74,8 +78,31 @@ function App() {
   };
 
   const downloadExcel = () => {
-    if (!fileId) {
+    if (!xlsxBase64 && !fileId) {
       setStatus('Scan an invoice first to enable download.');
+      return;
+    }
+
+    if (xlsxBase64) {
+      const binary = atob(xlsxBase64);
+      const len = binary.length;
+      const bytes = new Uint8Array(len);
+
+      for (let i = 0; i < len; i += 1) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+
+      const blob = new Blob([bytes], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName || 'invoice.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
       return;
     }
 

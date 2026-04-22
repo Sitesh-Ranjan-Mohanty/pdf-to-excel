@@ -267,18 +267,25 @@ app.post('/api/invoices/scan', upload.single('file'), async (req, res) => {
     const fileId = crypto.randomUUID();
     const fileName = `invoice_${Date.now()}.xlsx`;
     const excelPath = writeWorkbook(finalRows, fileName);
+    const workbookBuffer = fs.readFileSync(excelPath);
+    const xlsxBase64 = workbookBuffer.toString('base64');
 
-    downloadRegistry.set(fileId, {
-      path: excelPath,
-      fileName,
-      createdAt: Date.now(),
-    });
+    if (!process.env.VERCEL) {
+      downloadRegistry.set(fileId, {
+        path: excelPath,
+        fileName,
+        createdAt: Date.now(),
+      });
+    } else {
+      fs.rmSync(excelPath, { force: true });
+    }
 
     fs.rmSync(uploadedFilePath, { force: true });
 
     return res.json({
-      fileId,
+      fileId: process.env.VERCEL ? '' : fileId,
       fileName,
+      xlsxBase64,
       rows: finalRows,
       warning: hasReadableRows
         ? null
@@ -303,17 +310,19 @@ app.get('/api/invoices/download/:fileId', (req, res) => {
   return res.download(entry.path, entry.fileName);
 });
 
-setInterval(() => {
-  const maxAgeMs = 30 * 60 * 1000;
-  const now = Date.now();
+if (!process.env.VERCEL) {
+  setInterval(() => {
+    const maxAgeMs = 30 * 60 * 1000;
+    const now = Date.now();
 
-  for (const [fileId, meta] of downloadRegistry.entries()) {
-    if (now - meta.createdAt > maxAgeMs) {
-      fs.rmSync(meta.path, { force: true });
-      downloadRegistry.delete(fileId);
+    for (const [fileId, meta] of downloadRegistry.entries()) {
+      if (now - meta.createdAt > maxAgeMs) {
+        fs.rmSync(meta.path, { force: true });
+        downloadRegistry.delete(fileId);
+      }
     }
-  }
-}, 5 * 60 * 1000);
+  }, 5 * 60 * 1000);
+}
 
 if (require.main === module) {
   app.listen(PORT, () => {
