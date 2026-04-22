@@ -39,10 +39,19 @@ function App() {
         body: formData,
       });
 
-      const payload = await response.json();
+      const contentType = response.headers.get('content-type') || '';
+      const responseText = await response.text();
+      let payload = {};
+      if (contentType.includes('application/json') && responseText) {
+        try {
+          payload = JSON.parse(responseText);
+        } catch {
+          payload = {};
+        }
+      }
 
       if (!response.ok) {
-        throw new Error(payload.error || 'Scan failed.');
+        throw new Error(payload.error || responseText || 'Scan failed.');
       }
 
       setRows(payload.rows || []);

@@ -11,8 +11,9 @@ const { PDFParse } = require('pdf-parse');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const uploadDir = path.join(__dirname, 'uploads');
-const outputDir = path.join(__dirname, 'generated');
+const runtimeWritableBase = process.env.VERCEL ? '/tmp' : __dirname;
+const uploadDir = path.join(runtimeWritableBase, 'uploads');
+const outputDir = path.join(runtimeWritableBase, 'generated');
 
 for (const dir of [uploadDir, outputDir]) {
   if (!fs.existsSync(dir)) {
@@ -314,6 +315,10 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000);
 
-app.listen(PORT, () => {
-  console.log(`Backend server running on http://localhost:${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Backend server running on http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;
