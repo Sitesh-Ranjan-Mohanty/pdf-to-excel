@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: pdf-to-excel
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run backend:start
+    envVars:
+      - key: NODE_VERSION
+        value: 20
