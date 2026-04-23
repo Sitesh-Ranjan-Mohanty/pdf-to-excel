@@ -7,6 +7,7 @@
     "start": "concurrently \"npm run backend:start\" \"npm run frontend:start\"",
     "dev": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\"",
     "backend:start": "node backend/server.js",
+    "backend:start:render": "npm run build && node backend/server.js",
     "backend:dev": "nodemon backend/server.js",
     "frontend:start": "vite --config frontend/vite.config.mjs",
     "frontend:dev": "vite --config frontend/vite.config.mjs",
