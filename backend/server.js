@@ -14,7 +14,11 @@ const PORT = process.env.PORT || 3000;
 const runtimeWritableBase = __dirname;
 const uploadDir = path.join(runtimeWritableBase, 'uploads');
 const outputDir = path.join(runtimeWritableBase, 'generated');
-const frontendDistDir = path.join(__dirname, '..', 'frontend', 'dist');
+const frontendDistCandidates = [
+  path.join(__dirname, '..', 'frontend', 'dist'),
+  path.join(__dirname, '..', 'dist'),
+];
+const frontendDistDir = frontendDistCandidates.find((dir) => fs.existsSync(dir));
 
 for (const dir of [uploadDir, outputDir]) {
   if (!fs.existsSync(dir)) {
@@ -33,7 +37,9 @@ app.use(
   })
 );
 app.use(express.json());
-app.use(express.static(frontendDistDir));
+if (frontendDistDir) {
+  app.use(express.static(frontendDistDir));
+}
 
 const splitLineToRow = (line) => {
   if (PDF_PAGE_MARKER_RE.test(line)) {
@@ -313,13 +319,17 @@ app.get('/{*path}', (req, res, next) => {
     return next();
   }
 
-  if (fs.existsSync(frontendDistDir)) {
+  if (frontendDistDir) {
     return res.sendFile(path.join(frontendDistDir, 'index.html'));
   }
 
   return res
     .status(503)
-    .send('Frontend build not found. Run "npm run build" before starting the server.');
+    .send(
+      `Frontend build not found. Checked: ${frontendDistCandidates.join(
+        ', '
+      )}. Run "npm run build" before starting the server.`
+    );
 });
 
 setInterval(() => {
