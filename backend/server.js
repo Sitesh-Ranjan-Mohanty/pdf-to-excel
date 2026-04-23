@@ -11,7 +11,7 @@ const { PDFParse } = require('pdf-parse');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const runtimeWritableBase = process.env.VERCEL ? '/tmp' : __dirname;
+const runtimeWritableBase = __dirname;
 const uploadDir = path.join(runtimeWritableBase, 'uploads');
 const outputDir = path.join(runtimeWritableBase, 'generated');
 
@@ -270,20 +270,16 @@ app.post('/api/invoices/scan', upload.single('file'), async (req, res) => {
     const workbookBuffer = fs.readFileSync(excelPath);
     const xlsxBase64 = workbookBuffer.toString('base64');
 
-    if (!process.env.VERCEL) {
-      downloadRegistry.set(fileId, {
-        path: excelPath,
-        fileName,
-        createdAt: Date.now(),
-      });
-    } else {
-      fs.rmSync(excelPath, { force: true });
-    }
+    downloadRegistry.set(fileId, {
+      path: excelPath,
+      fileName,
+      createdAt: Date.now(),
+    });
 
     fs.rmSync(uploadedFilePath, { force: true });
 
     return res.json({
-      fileId: process.env.VERCEL ? '' : fileId,
+      fileId,
       fileName,
       xlsxBase64,
       rows: finalRows,
@@ -310,19 +306,17 @@ app.get('/api/invoices/download/:fileId', (req, res) => {
   return res.download(entry.path, entry.fileName);
 });
 
-if (!process.env.VERCEL) {
-  setInterval(() => {
-    const maxAgeMs = 30 * 60 * 1000;
-    const now = Date.now();
+setInterval(() => {
+  const maxAgeMs = 30 * 60 * 1000;
+  const now = Date.now();
 
-    for (const [fileId, meta] of downloadRegistry.entries()) {
-      if (now - meta.createdAt > maxAgeMs) {
-        fs.rmSync(meta.path, { force: true });
-        downloadRegistry.delete(fileId);
-      }
+  for (const [fileId, meta] of downloadRegistry.entries()) {
+    if (now - meta.createdAt > maxAgeMs) {
+      fs.rmSync(meta.path, { force: true });
+      downloadRegistry.delete(fileId);
     }
-  }, 5 * 60 * 1000);
-}
+  }
+}, 5 * 60 * 1000);
 
 if (require.main === module) {
   app.listen(PORT, () => {
